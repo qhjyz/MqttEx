@@ -9,6 +9,7 @@
 
 To run the example project, clone the repo, and run `pod install` from the Example directory first.
 
+``` objc
 -(void) connect {
     mqttClient=[[MqttClientEx alloc] initWithClientId:@"some_unique_id"];
     mqttClient.host=MQTT_SERVER;
@@ -38,7 +39,7 @@ To run the example project, clone the repo, and run `pod install` from the Examp
     } withCompletionHandler:nil];
     
 }
-
+```
 
 ## Requirements
 
