@@ -9,6 +9,37 @@
 
 To run the example project, clone the repo, and run `pod install` from the Example directory first.
 
+-(void) connect {
+    mqttClient=[[MqttClientEx alloc] initWithClientId:@"some_unique_id"];
+    mqttClient.host=MQTT_SERVER;
+    mqttClient.username=MQTT_USERNAME;
+    mqttClient.password=MQTT_PASSWORD;
+    
+    [mqttClient connectWithCompletionHandler:^(MQTTConnectionReturnCode code) {
+        NSLog(@"mqtt is connected");
+        mqttClient.keepAlive = 0;
+        [[NSNotificationCenter defaultCenter] postNotificationName:MQTT_CONNECTED object:nil];
+    }];
+    
+    mqttClient.disconnectionHandler=^(NSUInteger code)
+    {
+        NSLog(@"mqtt is disconnected");
+    };
+    
+}
+
+-(void) example {
+    [mqttClient subscribe:@"a" withTag:@"tag1" wittMessageHandler:^(MQTTMessage *message) {
+        
+    } withCompletionHandler:nil];
+    
+    [mqttClient subscribe:@"a" withTag:@"tag2" wittMessageHandler:^(MQTTMessage *message) {
+        
+    } withCompletionHandler:nil];
+    
+}
+
+
 ## Requirements
 
 ## Installation
