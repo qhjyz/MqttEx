@@ -39,6 +39,12 @@ To run the example project, clone the repo, and run `pod install` from the Examp
     } withCompletionHandler:nil];
     
 }
+
+-(void) stop {
+    mqttClient.keepAlive = 0;
+}
+
+
 ```
 
 ## Requirements
