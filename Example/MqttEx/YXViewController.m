@@ -26,7 +26,9 @@
 {
     [super viewDidLoad];
 	// Do any additional setup after loading the view, typically from a nib.
-    
+}
+
+-(void) connect {
     mqttClient=[[MqttClientEx alloc] initWithClientId:@"some_unique_id"];
     mqttClient.host=MQTT_SERVER;
     mqttClient.username=MQTT_USERNAME;
@@ -54,6 +56,10 @@
         
     } withCompletionHandler:nil];
     
+}
+
+-(void) stop {
+    mqttClient.keepAlive = 0;
 }
 
 - (void)didReceiveMemoryWarning
