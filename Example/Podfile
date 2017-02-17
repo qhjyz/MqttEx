@@ -1,0 +1,11 @@
+use_frameworks!
+
+target 'MqttEx_Example' do
+  pod 'MqttEx', :path => '../'
+
+  target 'MqttEx_Tests' do
+    inherit! :search_paths
+
+    
+  end
+end
