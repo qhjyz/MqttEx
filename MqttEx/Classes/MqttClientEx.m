@@ -18,10 +18,17 @@
         self.messageHandlerDict=[NSMutableDictionary dictionary];
         self.messageHandler=^(MQTTMessage* message)
         {
+            if (isSubscribing == YES) {
+                return;
+            }
             if (weakSelf.messageHandlerDict.count>0) {
                 NSMutableDictionary* keyHandlers=[weakSelf.messageHandlerDict objectForKey:message.topic];
                 if (keyHandlers) {
-                    for (NSString* key in keyHandlers) {
+                    NSArray* keys = keyHandlers.keys;
+                    for (NSString* key in keys) {
+                        if (isSubscribing == YES) {
+                            return;
+                        }
                         MQTTMessageHandler d=[keyHandlers objectForKey:key];
                         if (d) {
                             d(message);
@@ -46,29 +53,35 @@
 
 - (void)subscribe:(NSString *)topic withTag:(NSString*)tag wittMessageHandler:(MQTTMessageHandler)messageHandler withCompletionHandler:(MQTTSubscriptionCompletionHandler)completionHandler
 {
-    NSMutableDictionary* keyHandlers=[self.messageHandlerDict objectForKey:topic];
-    if (keyHandlers==nil) {
-        keyHandlers=[NSMutableDictionary dictionary];
+    @synchronized (self) {
+        isSubscribing = YES;
+        NSMutableDictionary* keyHandlers=[self.messageHandlerDict objectForKey:topic];
+        if (keyHandlers==nil) {
+            keyHandlers=[NSMutableDictionary dictionary];
+        }
+        if (keyHandlers.count==0) {
+            [super subscribe:topic withCompletionHandler:completionHandler];
+            //subscribe once
+        }
+        [keyHandlers setObject:[messageHandler copy] forKey:tag];
+        [self.messageHandlerDict setObject:keyHandlers forKey:topic];
+        isSubscribing = NO;
     }
-    if (keyHandlers.count==0) {
-        [super subscribe:topic withCompletionHandler:completionHandler];
-        //subscribe once
-    }
-    [keyHandlers setObject:[messageHandler copy] forKey:tag];
-    [self.messageHandlerDict setObject:keyHandlers forKey:topic];
-    
-    
 }
 
 - (void)unsubscribe:(NSString *)topic withTag:(NSString*)tag withCompletionHandler:(void (^)(void))completionHandler
 {
-    NSMutableDictionary* keyHandlers=[self.messageHandlerDict objectForKey:topic];
-    if (keyHandlers) {
-        [keyHandlers removeObjectForKey:tag];
-        if (keyHandlers.count==0) {
-            [super unsubscribe:topic withCompletionHandler:completionHandler];//unsubscribe only when empty
+    @synchronized (self) {
+        isSubscribing = YES;
+        NSMutableDictionary* keyHandlers=[self.messageHandlerDict objectForKey:topic];
+        if (keyHandlers) {
+            [keyHandlers removeObjectForKey:tag];
+            if (keyHandlers.count==0) {
+                [super unsubscribe:topic withCompletionHandler:completionHandler];//unsubscribe only when empty
+            }
+            [self.messageHandlerDict setObject:keyHandlers forKey:topic];
         }
-        [self.messageHandlerDict setObject:keyHandlers forKey:topic];
+        isSubscribing = NO;
     }
 }
 

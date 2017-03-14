@@ -1,5 +1,5 @@
 PODS:
-  - MqttEx (0.1.0)
+  - MqttEx (0.1.1)
 
 DEPENDENCIES:
   - MqttEx (from `../`)
@@ -9,7 +9,7 @@ EXTERNAL SOURCES:
     :path: ../
 
 SPEC CHECKSUMS:
-  MqttEx: 287bd6928182b04dc7b96149c3e82d2dc464d673
+  MqttEx: 3a93ca49dc85e23e402ca2ea9814a8e81cd2e6eb
 
 PODFILE CHECKSUM: 8456f1f1ecff48ce86e07968216de24ea22c4d7a
 
