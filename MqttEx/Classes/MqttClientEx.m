@@ -24,7 +24,7 @@
             if (weakSelf.messageHandlerDict.count>0) {
                 NSMutableDictionary* keyHandlers=[weakSelf.messageHandlerDict objectForKey:message.topic];
                 if (keyHandlers) {
-                    NSArray* keys = keyHandlers.keys;
+                    NSArray* keys = keyHandlers.allKeys;
                     for (NSString* key in keys) {
                         if (isSubscribing == YES) {
                             return;
