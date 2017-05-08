@@ -53,7 +53,7 @@
 
 - (void)subscribe:(NSString *)topic withTag:(NSString*)tag wittMessageHandler:(MQTTMessageHandler)messageHandler withCompletionHandler:(MQTTSubscriptionCompletionHandler)completionHandler
 {
-	if( topic == nil || tag == nil || messageHandler == nil || completionHandler == nil ){
+	if( topic == nil || tag == nil || messageHandler == nil ){
 		return ;
 	}
 	
@@ -75,7 +75,7 @@
 
 - (void)unsubscribe:(NSString *)topic withTag:(NSString*)tag withCompletionHandler:(void (^)(void))completionHandler
 {
-	if( topic == nil || tag == nil || completionHandler == nil ){
+	if( topic == nil || tag == nil  ){
 		return;
 	}
 	
