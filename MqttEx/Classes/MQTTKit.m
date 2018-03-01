@@ -197,13 +197,13 @@ static void on_unsubscribe(struct mosquitto *mosq, void *obj, int message_id)
 
         const char* cstrClientId = [self.clientID cStringUsingEncoding:NSUTF8StringEncoding];
 
-        mosq = mosquitto_new(cstrClientId, self.cleanSession, (__bridge void *)(self));
-        mosquitto_connect_callback_set(mosq, on_connect);
-        mosquitto_disconnect_callback_set(mosq, on_disconnect);
-        mosquitto_publish_callback_set(mosq, on_publish);
-        mosquitto_message_callback_set(mosq, on_message);
-        mosquitto_subscribe_callback_set(mosq, on_subscribe);
-        mosquitto_unsubscribe_callback_set(mosq, on_unsubscribe);
+        self.mosq = mosquitto_new(cstrClientId, self.cleanSession, (__bridge void *)(self));
+        mosquitto_connect_callback_set(self.mosq, on_connect);
+        mosquitto_disconnect_callback_set(self.mosq, on_disconnect);
+        mosquitto_publish_callback_set(self.mosq, on_publish);
+        mosquitto_message_callback_set(self.mosq, on_message);
+        mosquitto_subscribe_callback_set(self.mosq, on_subscribe);
+        mosquitto_unsubscribe_callback_set(self.mosq, on_unsubscribe);
 
         self.queue = dispatch_queue_create(cstrClientId, NULL);
     }
@@ -212,13 +212,13 @@ static void on_unsubscribe(struct mosquitto *mosq, void *obj, int message_id)
 
 - (void) setMessageRetry: (NSUInteger)seconds
 {
-    mosquitto_message_retry_set(mosq, (unsigned int)seconds);
+    mosquitto_message_retry_set(self.mosq, (unsigned int)seconds);
 }
 
 - (void) dealloc {
-    if (mosq) {
-        mosquitto_destroy(mosq);
-        mosq = NULL;
+    if (self.mosq) {
+        mosquitto_destroy(self.mosq);
+        self.mosq = NULL;
     }
 }
 
@@ -238,19 +238,21 @@ static void on_unsubscribe(struct mosquitto *mosq, void *obj, int message_id)
         cstrPassword = [self.password cStringUsingEncoding:NSUTF8StringEncoding];
     
     // FIXME: check for errors
-    while(mosquitto_username_pw_set(mosq, cstrUsername, cstrPassword)==MOSQ_ERR_NOMEM)
+    while(mosquitto_username_pw_set(self.mosq, cstrUsername, cstrPassword)==MOSQ_ERR_NOMEM)
     {
         usleep(50000);
     }
     
-    mosquitto_reconnect_delay_set(mosq, self.reconnectDelay, self.reconnectDelayMax, self.reconnectExponentialBackoff);
+    mosquitto_reconnect_delay_set(self.mosq, self.reconnectDelay, self.reconnectDelayMax, self.reconnectExponentialBackoff);
 
-    mosquitto_connect(mosq, cstrHost, self.port, self.keepAlive);
+    mosquitto_connect(self.mosq, cstrHost, self.port, self.keepAlive);
 
+    __weak MQTTClient* weakSelf = self;
+    
     dispatch_async(self.queue, ^{
         @try {
             LogDebug(@"start mosquitto loop on %@", self.queue);
-            mosquitto_loop_forever(mosq, -1, 1);
+            mosquitto_loop_forever(weakSelf.mosq, -1, 1);
             LogDebug(@"end mosquitto loop on %@", self.queue);
         }
         @catch (NSException *exception) {
@@ -271,14 +273,14 @@ static void on_unsubscribe(struct mosquitto *mosq, void *obj, int message_id)
 }
 
 - (void) reconnect {
-    mosquitto_reconnect(mosq);
+    mosquitto_reconnect(self.mosq);
 }
 
 - (void) disconnectWithCompletionHandler:(MQTTDisconnectionHandler)completionHandler {
     if (completionHandler) {
         self.disconnectionHandler = completionHandler;
     }
-    mosquitto_disconnect(mosq);
+    mosquitto_disconnect(self.mosq);
 }
 
 - (void)setWillData:(NSData *)payload
@@ -287,7 +289,7 @@ static void on_unsubscribe(struct mosquitto *mosq, void *obj, int message_id)
              retain:(BOOL)retain
 {
     const char* cstrTopic = [willTopic cStringUsingEncoding:NSUTF8StringEncoding];
-    mosquitto_will_set(mosq, cstrTopic, (int)(payload.length), payload.bytes, willQos, retain);
+    mosquitto_will_set(self.mosq, cstrTopic, (int)(payload.length), payload.bytes, willQos, retain);
 }
 
 - (void)setWill:(NSString *)payload
@@ -303,7 +305,7 @@ static void on_unsubscribe(struct mosquitto *mosq, void *obj, int message_id)
 
 - (void)clearWill
 {
-    mosquitto_will_clear(mosq);
+    mosquitto_will_clear(self.mosq);
 }
 
 #pragma mark - Publish
@@ -318,7 +320,7 @@ static void on_unsubscribe(struct mosquitto *mosq, void *obj, int message_id)
         [self.publishHandlers setObject:completionHandler forKey:[NSNumber numberWithInt:0]];
     }
     int mid;
-    mosquitto_publish(mosq, &mid, cstrTopic, (int)(payload.length), payload.bytes, qos, retain);
+    mosquitto_publish(self.mosq, &mid, cstrTopic, (int)(payload.length), payload.bytes, qos, retain);
     if (completionHandler) {
         if (qos == 0) {
             completionHandler(mid);
@@ -350,7 +352,7 @@ static void on_unsubscribe(struct mosquitto *mosq, void *obj, int message_id)
 {
     const char* cstrTopic = [topic cStringUsingEncoding:NSUTF8StringEncoding];
     int mid;
-    mosquitto_subscribe(mosq, &mid, cstrTopic, qos);
+    mosquitto_subscribe(self.mosq, &mid, cstrTopic, qos);
     if (completionHandler) {
         [self.subscriptionHandlers setObject:[completionHandler copy] forKey:[NSNumber numberWithInteger:mid]];
     }
@@ -360,7 +362,7 @@ static void on_unsubscribe(struct mosquitto *mosq, void *obj, int message_id)
 {
     const char* cstrTopic = [topic cStringUsingEncoding:NSUTF8StringEncoding];
     int mid;
-    mosquitto_unsubscribe(mosq, &mid, cstrTopic);
+    mosquitto_unsubscribe(self.mosq, &mid, cstrTopic);
     if (completionHandler) {
         [self.unsubscriptionHandlers setObject:[completionHandler copy] forKey:[NSNumber numberWithInteger:mid]];
     }

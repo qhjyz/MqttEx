@@ -45,8 +45,9 @@ typedef void (^MQTTDisconnectionHandler)(NSUInteger code);
 @class MQTTClient;
 
 @interface MQTTClient : NSObject {
-    struct mosquitto *mosq;
+    
 }
+@property (nonatomic,assign) struct mosquitto *mosq;
 
 @property (readwrite, copy) NSString *clientID;
 @property (readwrite, copy) NSString *host;
