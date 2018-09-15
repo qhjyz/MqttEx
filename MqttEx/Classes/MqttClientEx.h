@@ -14,7 +14,6 @@
 
 @interface MqttClientEx : MQTTClient
 {
-    BOOL isSubscribing;
 }
 
 @property (nonatomic,strong) NSMutableDictionary* messageHandlerDict; // topic-tag-handler

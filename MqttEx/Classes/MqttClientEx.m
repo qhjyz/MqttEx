@@ -14,28 +14,25 @@
 {
     self=[super initWithClientId:clientId];
     if (self) {
+        
         __weak MqttClientEx* weakSelf=self;
         self.messageHandlerDict=[NSMutableDictionary dictionary];
         self.messageHandler=^(MQTTMessage* message)
         {
-            if (isSubscribing == YES) {
-                return;
-            }
-            if (weakSelf.messageHandlerDict.count>0) {
-                NSMutableDictionary* keyHandlers=[weakSelf.messageHandlerDict objectForKey:message.topic];
-                if (keyHandlers) {
-                    NSArray* keys = keyHandlers.allKeys;
-                    for (NSString* key in keys) {
-                        if (isSubscribing == YES) {
-                            return;
-                        }
-                        MQTTMessageHandler d=[keyHandlers objectForKey:key];
-                        if (d) {
-                            d(message);
+            dispatch_sync(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+                if (weakSelf.messageHandlerDict.count>0) {
+                    NSMutableDictionary* keyHandlers=[weakSelf.messageHandlerDict objectForKey:message.topic];
+                    if (keyHandlers) {
+                        NSArray* keys = keyHandlers.allKeys;
+                        for (NSString* key in keys) {
+                            MQTTMessageHandler d=[keyHandlers objectForKey:key];
+                            if (d) {
+                                d(message);
+                            }
                         }
                     }
                 }
-            }
+            });
         };
     }
     return self;
@@ -56,9 +53,7 @@
 	if( topic == nil || tag == nil || messageHandler == nil ){
 		return ;
 	}
-	
-    @synchronized (self) {
-        isSubscribing = YES;
+    dispatch_barrier_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
         NSMutableDictionary* keyHandlers=[self.messageHandlerDict objectForKey:topic];
         if (keyHandlers==nil) {
             keyHandlers=[NSMutableDictionary dictionary];
@@ -69,8 +64,7 @@
         }
         [keyHandlers setObject:[messageHandler copy] forKey:tag];
         [self.messageHandlerDict setObject:keyHandlers forKey:topic];
-        isSubscribing = NO;
-    }
+    });
 }
 
 - (void)unsubscribe:(NSString *)topic withTag:(NSString*)tag withCompletionHandler:(void (^)(void))completionHandler
@@ -79,8 +73,7 @@
 		return;
 	}
 	
-    @synchronized (self) {
-        isSubscribing = YES;
+    dispatch_barrier_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
         NSMutableDictionary* keyHandlers=[self.messageHandlerDict objectForKey:topic];
         if (keyHandlers) {
             [keyHandlers removeObjectForKey:tag];
@@ -89,8 +82,7 @@
             }
             [self.messageHandlerDict setObject:keyHandlers forKey:topic];
         }
-        isSubscribing = NO;
-    }
+    });
 }
 
 -(void) unsubscribeAll
