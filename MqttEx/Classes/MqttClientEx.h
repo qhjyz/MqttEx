@@ -14,6 +14,8 @@
 
 @interface MqttClientEx : MQTTClient
 {
+    int mqttQueuePriority;
+    dispatch_queue_t mqttQueue;
 }
 
 @property (nonatomic,strong) NSMutableDictionary* messageHandlerDict; // topic-tag-handler
@@ -26,5 +28,6 @@
 
 
 -(void) unsubscribeAll;
+-(void) reSubscribeAll;
 
 @end

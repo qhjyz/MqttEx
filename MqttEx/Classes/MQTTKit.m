@@ -205,7 +205,6 @@ static void on_unsubscribe(struct mosquitto *mosq, void *obj, int message_id)
         mosquitto_subscribe_callback_set(self.mosq, on_subscribe);
         mosquitto_unsubscribe_callback_set(self.mosq, on_unsubscribe);
 
-        self.queue = dispatch_queue_create(cstrClientId, NULL);
     }
     return self;
 }
@@ -249,20 +248,24 @@ static void on_unsubscribe(struct mosquitto *mosq, void *obj, int message_id)
 
     __weak MQTTClient* weakSelf = self;
     
-    dispatch_async(self.queue, ^{
-        @try {
-            LogDebug(@"start mosquitto loop on %@", self.queue);
-            mosquitto_loop_forever(weakSelf.mosq, -1, 1);
-            LogDebug(@"end mosquitto loop on %@", self.queue);
-        }
-        @catch (NSException *exception) {
-            NSLog(@"mosquitto loop exception: %@", exception.reason);
-        }
-        @finally {
-            NSLog(@"mosquitto loop failed");
-        }
-    });
-
+    if (self.queue==nil) {
+        const char* cstrClientId = [self.clientID cStringUsingEncoding:NSUTF8StringEncoding];
+        self.queue = dispatch_queue_create(cstrClientId, NULL);
+    }
+    
+    if( self.queue != nil ){
+        dispatch_async(self.queue, ^{
+            @try {
+                mosquitto_loop_forever(weakSelf.mosq, -1, 1);
+            }
+            @catch (NSException *exception) {
+                NSLog(@"mosquitto loop exception: %@", exception.reason);
+            }
+            @finally {
+                NSLog(@"mosquitto loop failed");
+            }
+        });
+    }
     
 }
 

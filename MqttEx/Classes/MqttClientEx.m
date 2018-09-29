@@ -14,12 +14,14 @@
 {
     self=[super initWithClientId:clientId];
     if (self) {
+        mqttQueuePriority = DISPATCH_QUEUE_PRIORITY_BACKGROUND;
+        mqttQueue = dispatch_queue_create("cn.qhjyz.mqttclient",DISPATCH_QUEUE_SERIAL);
         
         __weak MqttClientEx* weakSelf=self;
         self.messageHandlerDict=[NSMutableDictionary dictionary];
         self.messageHandler=^(MQTTMessage* message)
         {
-            dispatch_sync(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+            dispatch_sync(mqttQueue, ^{
                 if (weakSelf.messageHandlerDict.count>0) {
                     NSMutableDictionary* keyHandlers=[weakSelf.messageHandlerDict objectForKey:message.topic];
                     if (keyHandlers) {
@@ -53,7 +55,7 @@
 	if( topic == nil || tag == nil || messageHandler == nil ){
 		return ;
 	}
-    dispatch_barrier_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+    dispatch_async(mqttQueue, ^{
         NSMutableDictionary* keyHandlers=[self.messageHandlerDict objectForKey:topic];
         if (keyHandlers==nil) {
             keyHandlers=[NSMutableDictionary dictionary];
@@ -73,14 +75,16 @@
 		return;
 	}
 	
-    dispatch_barrier_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+    dispatch_async(mqttQueue, ^{
         NSMutableDictionary* keyHandlers=[self.messageHandlerDict objectForKey:topic];
         if (keyHandlers) {
             [keyHandlers removeObjectForKey:tag];
             if (keyHandlers.count==0) {
                 [super unsubscribe:topic withCompletionHandler:completionHandler];//unsubscribe only when empty
             }
-            [self.messageHandlerDict setObject:keyHandlers forKey:topic];
+            dispatch_barrier_async(mqttQueue, ^{
+                [self.messageHandlerDict setObject:keyHandlers forKey:topic];
+            });
         }
     });
 }
@@ -93,6 +97,12 @@
     }
     for (NSString* topic in topics) {
         [self unsubscribe:topic withCompletionHandler:nil];
+    }
+}
+
+-(void) reSubscribeAll{
+    for (NSString* topic in self.messageHandlerDict) {
+        [super subscribe:topic withCompletionHandler:nil];
     }
 }
 
